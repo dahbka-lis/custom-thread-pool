@@ -11,11 +11,11 @@ void MPMCUnboundedQueue::AddTask(std::function<void()> &&task) {
 }
 
 std::optional<std::function<void()>> MPMCUnboundedQueue::TakeTask() {
-    if (is_closed_.load()) {
+    std::unique_lock<std::mutex> lock(mutex_);
+
+    if (is_closed_.load() && queue_.empty()) {
         return std::nullopt;
     }
-
-    std::unique_lock<std::mutex> lock(mutex_);
 
     while (queue_.empty()) {
         cond_.wait(lock, [this] { return !queue_.empty(); });
